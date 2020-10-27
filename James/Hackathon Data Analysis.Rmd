@@ -1,0 +1,92 @@
+---
+title: "Hackathon Data Analysis"
+output: html_notebook
+---
+
+Add libraries, import and save files.
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+setwd('/Users/jameswelch/Dropbox (Personal)/NYDSA/Work/Hackathons/NYCDSA_Hackathon_Oct_2020/James')
+
+churn_trunc <- read_csv("./trunc_churn.csv")
+members_trunc <- read_csv("./trunc_members.csv")
+transaction_trunc <- read_csv("./trunc_transaction.csv")
+users_trunc <- read_csv("./trunc_users.csv")
+```
+
+Wrange that data
+-convert numeric dates to actual date types
+
+```{r, resutls = 'hide'}
+# members_trunc <- members_trunc %>% 
+#   mutate(.,registration_init_time = as.Date(as.character(registration_init_time),"%Y%m%d"))
+# transaction_trunc <- transaction_trunc %>%  
+#  mutate(.,transaction_date = as.Date(as.character(transaction_date),"%Y%m%d"))
+#transaction_trunc <- transaction_trunc %>%  
+#  mutate(.,membership_expire_date = as.Date(as.character(membership_expire_date), format = "%Y %m %d"))
+users_trunc <- users_trunc %>%  
+  mutate(.,date = as.Date(as.character(date),format = "%Y%m%d"))
+```
+
+Churn dataframe for QC
+```{r}
+print("Churn Dataframe")
+print(paste0("total entires: ", length(churn_trunc$is_churn)))
+print(paste0("number unique msno: ",length(unique(churn_trunc$msno))))
+print(paste0("total churns: ", sum(churn_trunc$is_churn)))
+print(paste0("percentage churns: ", sum(churn_trunc$is_churn)/length(churn_trunc$is_churn)*100, "%"))
+
+```
+Members dataframe for QC
+```{r}
+print("Members_trunc")
+print(paste0("total entires: ", length(members_trunc$msno)))
+print(paste0("number unique msno: ",length(unique(members_trunc$msno))))
+print(paste0("number of cities: ", length((unique(members_trunc$city)))))
+print(paste0("pop range in each city: ", members_trunc %>% group_by(., city) %>% count() %>%  range() ))
+print(paste0("City 1 is probably a null when entering the form, or the first city the company started in."))
+members_trunc %>% group_by(., city) %>% count()
+print("see grouped_df for by city counts")
+hist(members_trunc$city)
+print("see histograme for by city counts")
+print("see df and histogram for bd")
+group_by(members_trunc, as.factor(members_trunc$bd)) %>% count()
+hist(members_trunc$bd)
+hist(members_trunc[which(members_trunc$bd>=5 & members_trunc$bd<100),]$bd)
+
+print("obvious negaitve and extremely high (>100) can be ignored as truthful. ")
+print("age=0 is roughly the same count as city, same member ids?")
+print(paste0("gender breakdown(Female/male/NA: ",group_by(members_trunc,gender) %>% count())[2])
+print("see datagrame of registration types")
+members_trunc %>% group_by(., registered_via) %>% count()
+print(paste0("Registration start data range",range(members_trunc$registration_init_time)))
+
+```
+
+Explore usage dataset
+assemble dataframe with churn added
+```{r}
+users_seg <- merge(users_trunc,churn_trunc, by='msno', all = TRUE)
+```
+```{r}
+sum(is.na(users_seg$date))
+#head(users_seg,20)
+```
+
+How do we characterize a day or activity?
+How do we characterize multiple days?
+How do we characterize a user?
+
+Ideas
+- how does user behavior and likelihood to stay interact?
+- city by city usage patterns?
+- high intervention versus low intervention in song choice
+- are payment methods more likely to churn than others?
+- how are the people that leave?
+--what does usage look like?
+--what payment plans, information?
+
+
