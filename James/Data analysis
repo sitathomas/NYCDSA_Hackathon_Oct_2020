@@ -1,0 +1,45 @@
+Data analysis:
+
+trunc_members: 
+- msno : unique member hash
+-city
+-cd: age
+-gender
+-registration_via: method 
+-registration_init_time: 
+-expiration_date:when the member.csv is extracted (not representing actual churn behavior)
+
+trun_users: (user logs)
+- msno : unique user id
+- date: (unique?)
+- num_25: less than 25% played
+- num_50: 25-50% played
+- num_75: 50-75% played
+- num_985: 75-98.5% played
+- num_100: over 98.5% played
+?Heterogenaity to indicate usage?
+- num_unq: # unique songs played
+- total_secs: total seconds
+?useful!!!?
+
+
+trunc_churn: (train.csv)
+- msno: user id
+- is_churn: if the users do not continue within 30-days of expiration 1 = churn, 0 = stayed.
+
+
+trunc_transactions:
+-msno: user id
+- payment_method_id: types of payment methods
+- payment_plan_days: legth of membership
+- plan_list_price: in NTD
+- actual_amount_paid: in New taiwan dollar (NTD)
+- is_auto_renew
+- transaction_date:
+- membership_expire_data: 
+- is_cancel: if the user has canceled the membership
+?decent number, use to predict?
+
+
+Questions:
+There are more people registering in 2016, is there reaons? payment? cities? registration?
