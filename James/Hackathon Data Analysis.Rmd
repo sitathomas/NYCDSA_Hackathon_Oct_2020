@@ -71,19 +71,129 @@ assemble dataframe with churn added
 ```{r}
 users_seg <- merge(users_trunc,churn_trunc, by='msno', all = TRUE)
 ```
+Missingness
 ```{r}
 sum(is.na(users_seg$date))
 #head(users_seg,20)
+
+colSums(is.na(users_seg))
+
+users_seg[is.na(users_seg$date),]
+sum(users_seg[is.na(users_seg$date),]$is_churn)
+print("percentage churn: ")
+(sum(users_seg[is.na(users_seg$date),]$is_churn) / length(users_seg[is.na(users_seg$date),]$is_churn)) * 100
+
+
+users_seg <- users_seg %>%  filter(., date != is.na(date))
+
+```
+Seems to be a by-product of the join, there is msno for users without corresponding user data. Perhaps this is users who pay but don't use the product or some issue with the data collection? The rate of churn seems to be roughly the same (8.9% vs 9.2% overall). These entries with missing data are dropped for this analysis. 
+
+
+Maybe there is a clear pattern in usage? The log scale was chosen due to the wide spread in listening times.
+```{r}
+users_seg %>% 
+  filter(., total_secs != is.na(total_secs)) %>% 
+  mutate(., is_churn = as.factor(is_churn), .keep = c("all")) %>%
+  mutate(., total_min = total_secs/60) %>% 
+  ggplot(., aes(x = is_churn, y = log(total_min))) +
+  geom_boxplot()
+
+users_seg %>% 
+  filter(., total_secs != is.na(total_secs)) %>% 
+  mutate(., is_churn = as.factor(is_churn), .keep = c("all")) %>%
+  mutate(., total_min = total_secs/60) %>% 
+  ggplot(., aes(x = is_churn, y = (total_min))) +
+  geom_boxplot()
+
+#users_seg %>% 
+  # filter(., total_secs != is.na(total_secs)) %>% 
+  # mutate(., is_churn = as.factor(is_churn), .keep = c("all")) %>%
+  # mutate(., total_min = total_secs/60) %>% 
+  # ggplot(., aes(x = is_churn, y = log(total_min))) +
+  # geom_violin()
+```
+Visually, they look identical. There are some weird outliers, 2000 minutes of songs per day? Maybe the date feature is when the user started a session in rather than the strict date of play?
+
+Statistically 
+```{r}
+user_seg_ttest <- users_seg %>% 
+  mutate(., is_churn = as.factor(is_churn), .keep = c("all"))
+
+  t.test(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 0], y = user_seg_ttest$total_secs[user_seg_ttest$is_churn == 1], var.equal = F)
+  var.test(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 0], y = user_seg_ttest$total_secs[user_seg_ttest$is_churn == 1])
+  
+  print("Not Churn Mean")
+  mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 0])
+  print("Churn Mean")
+  mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 1])
+  print("difference in means:")
+  mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 0]) - mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 1])
+  print("or in minutes: ")
+    (mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 0]) - mean(user_seg_ttest$total_secs[user_seg_ttest$is_churn == 1])) / 60
+```
+This also appear indistingusihable. Perhaps the pattern of usage, rather than the total will better characterize those who leave? Varience is unequal between the groups higher in the non-churn group.
+
+
+How much data do we have for each user?
+```{r}
+msno_days <- users_seg %>% 
+  group_by(., msno) %>% 
+  count(., msno, is_churn)
+
+#unique users / quick QC
+#without date grouping = 15457
+# with date grouping = 277101, which is equivalent to our inital set
+print("number of unique msno in users_truncated")
+length(unique(users_seg$msno))
+print("number of msno when counting dates")
+length(msno_days$msno)
+
+msno_days %>% 
+  ggplot(., aes(x = n,)) +
+  geom_histogram(bins = 31) 
+
+msno_days %>% 
+  ggplot(., aes(x = n)) +
+  geom_density()
+
+
 ```
 
+Exploring number of days the product is used might be a fruitful avenue as an independent analysis.
+Why is 15 such a common amount compared to 14 or 16? Perhaps we are catching people signing up in the middle of the data capture? 
+```{r}
+msno_days %>% 
+  ggplot(., aes(x = as.factor(is_churn), y = n)) +
+  geom_boxplot() +
+  ylab("Number of days of observations per msno")
+```
+Again, there seems to be a slight difference between, perhaps the shape is different?
+
+
+```{r}
+msno_days %>% 
+  ggplot(., aes(x = n, group = as.factor(is_churn), fill = as.factor(is_churn))) +
+  geom_density(alpha = 0.4, position = "fill")
+```
+
+
+
+
+
 How do we characterize a day or activity?
+- engagement (number of interventions in playing)
+- choosiness (number of interventions before 75 or 98%)
+-percentage completed
+-average song length (feels weak)
+-date played?
 How do we characterize multiple days?
 How do we characterize a user?
 
 Ideas
 - how does user behavior and likelihood to stay interact?
-- city by city usage patterns?
 - high intervention versus low intervention in song choice
+- city by city usage patterns?
 - are payment methods more likely to churn than others?
 - how are the people that leave?
 --what does usage look like?
