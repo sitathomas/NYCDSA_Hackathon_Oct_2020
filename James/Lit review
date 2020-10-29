@@ -1,0 +1,67 @@
+https://openviewpartners.com/blog/customer-segmentation/#.X5ipI1NKjUr
+- A priori seg : based on avalible characteristics (company size)
+- Needs based seg : what customer wants
+- Value based seg : by economic value
+- need to have a basal hypothesis and test against it
+- many variables to segment are only valuble in context (how they can be used in buisness)
+- focusing on 1 or several groups is the way to grow.
+- ..
+
+https://www.sciencedirect.com/science/article/abs/pii/S0305048300000426
+- [seg of online services using clustering]
+- fuzzy clustering : points can belong to mutliple clusters (useful if we go characterization rather than)
+- not applicable for users, more directed at the service
+
+
+https://christiankabbas.files.wordpress.com/2017/02/merged_document.pdf
+-[spotify marketing analysis]
+-
+
+
+https://www.midiaresearch.com/blog/music-consumer-segmentation-from-lagging-indicators-to-leading-indicators
+- Music aficionades : core customer
+-- Spend $5.8 / month
+-- only 17% of customers
+- forgotten fams
+-- 30% of customers
+-- above average listening, low spending.
+? is there price segmentation in the data? Different $/time for users?
+
+https://www.theverge.com/2017/7/11/15953012/spotify-marketing-data-listening-habits
+- sub-categories of below ("easy goers" = backgroun music, "eclectics" = no specific taste)
+- (https://spotifyforbrands.com/us/feature/streaming-habits/)
+- definitly possible to sell at a perticular consumer
+- from search (https://www.thedrum.com/news/2017/06/13/understanding-people-through-music)
+-- spotify uses 3 streaming habits
+--- discovery : how much new music is sought out
+--- diversity : range of music
+--- Tilt : hwo actively people curate their streaming
+
+https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.1040.6749&rep=rep1&type=pdf
+-[understanding user vehavior]
+- users have strong patterns for usage
+? can we confirm strong usage patterns?
+-you can model user session 'stickiness' but thats not useful for us.
+
+https://students.washington.edu/yeaseul1/paper/article3.pdf
+- [source of model: 18 : https://archives.ismir.net/ismir2015/paper/000012.pdf]
+- classify persona's and give examples 
+- provide data on population level for each type
+- provide spotify and youtube proportionality data.
+? data on playlists may be a strong driver of interest in this platform - especially with the 'listen with' feature.
+? do people curate and listen to 1 playlist togeather?
+?
+
+
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0239418
+- [skipping behavior related to song structure]
+
+
+https://www.kkbox.com/about/en/about
+- not avalible in the US
+- "listen with" feature
+- has playlist features
+-
+- lyrics are a big driver, what kind of user is this?
+
+
