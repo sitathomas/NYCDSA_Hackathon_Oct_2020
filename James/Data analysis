@@ -31,12 +31,12 @@ trunc_churn: (train.csv)
 trunc_transactions:
 -msno: user id
 - payment_method_id: types of payment methods
-- payment_plan_days: legth of membership
+- payment_plan_days: length of membership
 - plan_list_price: in NTD
 - actual_amount_paid: in New taiwan dollar (NTD)
 - is_auto_renew
 - transaction_date:
-- membership_expire_data: 
+- membership_expire_date: 
 - is_cancel: if the user has canceled the membership
 ?decent number, use to predict?
 

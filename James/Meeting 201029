@@ -1,0 +1,19 @@
+Meeting Notes 10.28
+Features:
+- total seconds per month
+- total seconds / day
+- length of usage (registration_init_time is start, which is end [transaction_date, membership_expire_date, payment_plan_days])
+- cost per day / seconds of service
+- average point of skip (needs a definition)
+- Percentage skips after 75%
+- percentage skips before 25% (or 50%?)
+- total_seconds per unique song
+- Some metric which correlates with 'searching' (high skipping & low total_seconds per unique song)
+
+
+
+two variable tests:
+- usage compaired to length of plan
+- what does a longer usage (start to current time) correlate with?
+- usage versus churn
+- length of plan versus churn
