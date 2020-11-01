@@ -8,7 +8,6 @@ members_df: user information. Note that not every user in the dataset is availab
     -- gender
     -- registered_via: registration method
     -- registration_init_time: format %Y%m%d
-    -- expiration_date: format %Y%m%d, taken as a snapshot at which the member.csv is extracted. Not representing the actual churn behavior.
 
 transactions_df: transactions of users
     -- payment_method_id: payment method
