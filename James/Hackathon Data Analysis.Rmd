@@ -178,9 +178,6 @@ msno_days %>%
 ```
 
 
-
-
-
 How do we characterize a day or activity?
 - engagement (number of interventions in playing)
 - choosiness (number of interventions before 75 or 98%)
@@ -198,5 +195,671 @@ Ideas
 - how are the people that leave?
 --what does usage look like?
 --what payment plans, information?
+
+
+Price per day of plan:
+```{r}
+
+hist(transaction_trunc$plan_list_price / transaction_trunc$payment_plan_days)
+filter(transaction_trunc, 1> transaction_trunc$plan_list_price / transaction_trunc$payment_plan_days)
+```
+Almost everyone pays the same price per day of service.
+
+Seconds per month by user
+```{r}
+#length(unique(users_seg$msno)) 15457 if 20k drop NA
+
+
+
+user_activity <- users_seg %>% 
+  group_by(., msno) %>% 
+  summarise(., num_active_days = length(unique(date)), num_seconds = sum(total_secs), is_churn = as.factor(mean(is_churn)))
+
+length(unique(user_activity$msno))
+
+user_activity %>% 
+  ggplot(., aes(x = num_active_days, y = num_seconds)) +
+  geom_point(aes(shape = is_churn,color=is_churn,))
+
+# user_activity %>% 
+#   ggplot(., aes(x = is_churn, y = num_seconds)) +
+#   geom_boxplot()
+# 
+# user_activity %>% 
+#   ggplot(., aes(x = is_churn, y = num_active_days)) +
+#   geom_boxplot()
+
+user_activity %>%
+  ggplot(., aes(x = is_churn, y = num_seconds /num_active_days)) +
+  geom_boxplot()
+
+```
+Not much visually different, churners seem to blend in with regular users
+
+
+Subscription length
+```{r}
+churn_trunc <- read_csv("./trunc_churn.csv")
+members_trunc <- read_csv("./trunc_members.csv")
+transaction_trunc <- read_csv("./trunc_transaction.csv")
+
+members_trunc <- members_trunc %>%
+  mutate(.,registration_init_time = as.Date(as.character(registration_init_time),"%Y%m%d"))
+transaction_trunc <- transaction_trunc %>%
+ mutate(.,transaction_date = as.Date(as.character(transaction_date),"%Y%m%d"))
+transaction_trunc <- transaction_trunc %>%
+ mutate(.,membership_expire_date = as.Date(as.character(membership_expire_date), format = "%Y %m %d"))
+
+T_and_M <- merge(transaction_trunc, members_trunc, by='msno', all= TRUE)
+
+T_and_M <- T_and_M %>% filter(.,registration_init_time != is.na(registration_init_time)) %>% 
+              filter(., transaction_date != is.na(transaction_date))
+
+T_and_M <- T_and_M %>% mutate(., registraiton_length = abs(as.integer(difftime(registration_init_time, transaction_date, units='days'))))
+T_and_M <-merge(T_and_M, churn_trunc, by='msno', all=TRUE)
+
+T_and_M %>% 
+  ggplot(., aes(x=registraiton_length, group= as.factor(is_churn), fill = as.factor(is_churn))) +
+  geom_histogram(position = "stack")
+T_and_M %>% 
+  ggplot(., aes(x=registraiton_length, group= as.factor(is_churn), fill = as.factor(is_churn))) +
+  geom_histogram(position = "fill")
+
+
+hist(T_and_M$registraiton_length, na.rm = T)
+
+
+T_and_M <- T_and_M %>% 
+  mutate(., rev_per_day = plan_list_price / payment_plan_days)
+
+T_and_M %>% 
+  ggplot(., aes(x=registraiton_length, y = rev_per_day, group = as.factor(is_churn), color = as.factor(is_churn))) +
+  geom_point()
+
+T_and_M %>% 
+  ggplot(., aes(x=registraiton_length, y = plan_list_price, group = as.factor(is_churn), color = as.factor(is_churn))) +
+  geom_point()
+
+T_and_M %>% 
+  ggplot(., aes(x=registraiton_length, y = payment_plan_days, group = as.factor(is_churn), color = as.factor(is_churn))) +
+  geom_point()
+
+T_and_M %>% 
+  ggplot(., aes(x= as.factor(is_churn), y=log(plan_list_price))) +
+  geom_boxplot()
+
+T_and_M %>% 
+  group_by(., payment_plan_days, plan_list_price, is_churn) %>%  #payment plan days, list price, churn
+  summarise(., number_users = n()) %>% 
+  mutate(., )
+  pivot_wider(., names_from = is_churn, values_from = number_users, values_fill = 0) %>% 
+  mutate(., unq_ID = paste(payment_plan_days, plan_list_price, sep = "_"),
+            #'0' = stayed,
+            #'1' = left,
+            #total_user = sum(stayed, left),
+            #percent_stay = stayed / total_user,
+            #percent_left = left / total_user
+         )
+
+
+T_and_M %>% 
+  group_by(., payment_plan_days, plan_list_price, is_churn) %>%  #payment plan days, list price, churn
+  summarise(., number_users = n()) %>% 
+  mutate(., unq_ID = as.character(paste(payment_plan_days, plan_list_price, sep = "_"))) %>% 
+  #           0 = stayed,
+  #           1 = left,
+  #           total_user = sum(stayed, left)) %>% 
+  ggplot(., aes(x=unq_ID, y = number_users, group = is_churn,fill = is_churn)) +
+    geom_bar(stat = "identity", position  = "stack" ) #fill
+
+T_and_M %>% 
+  group_by(., payment_plan_days, plan_list_price, is_churn) %>%  #payment plan days, list price, churn
+  summarise(., number_users = n()) %>% 
+  mutate(., unq_ID = as.character(paste(payment_plan_days, plan_list_price, sep = "_"))) %>% 
+  #           0 = stayed,
+  #           1 = left,
+  #           total_user = sum(stayed, left)) %>% 
+  ggplot(., aes(x=unq_ID, y = number_users, group = is_churn,fill = is_churn)) +
+    geom_bar(stat = "identity", position  = "fill" )
+
+
+T_and_M %>% 
+  group_by(., payment_plan_days, plan_list_price, is_churn) %>%  #payment plan days, list price, churn
+  summarise(., number_users = n()) %>% 
+  mutate(., unq_ID = as.character(paste(payment_plan_days, plan_list_price, sep = "_"))) %>% 
+  #           0 = stayed,
+  #           1 = left,
+  #           total_user = sum(stayed, left)) %>% 
+  ggplot(., aes(x=as.factor(payment_plan_days), y = number_users, group = is_churn,fill = is_churn)) +
+    geom_bar(stat = "identity", position  = "fill" )
+
+T_and_M %>% 
+  group_by(., payment_plan_days, plan_list_price, is_churn, is_auto_renew) %>%  #payment plan days, list price, churn
+  summarise(., number_users = n()) %>% 
+  mutate(., unq_ID = as.character(paste(payment_plan_days, plan_list_price, sep = "_"))) %>% 
+  #           0 = stayed,
+  #           1 = left,
+  #           total_user = sum(stayed, left)) %>% 
+  ggplot(., aes(x=payment_plan_days, y = plan_list_price, group = is_churn,color = is_churn, )) +
+    geom_point( aes(size = number_users, shape=as.factor(is_auto_renew))  )
+
+
+#df %>% spread(key, value) is equivalent to df %>% pivot_wider(names_from = key, values_from = value)
+
+# msno_days %>% 
+#   ggplot(., aes(x = n, group = as.factor(is_churn), fill = as.factor(is_churn))) +
+#  geom_density(alpha = 0.4, position = "fill")
+
+T_and_M %>% 
+  ggplot(., aes(x = as.factor(is_auto_renew)))
+
+
+
+```
+CHurn seems to be distributed evenly acorss length of subscription. 
+
+
+
+Feature engineering:
+These are some "listening session features" I came up with, the ones with proxy are to try and model variables in the literature.
+Average time at skip = weighted average of columns using the center point of the categories. (Num_25 = 0.1, num_50 = 0.375, num_75 = 0.625, num_985 = 0.8675, num_100 = 1) <25% and 100 are weighted differently to "pull" in a direction.
+Percent early skips = Num_25 + Num_50 / total skips
+Engagement = total skips / time played
+Range_proxy = unique songs / early skips
+Search_proxy = early skips / time (lots of skips for the amount listened) (percentage early skips versus total skips?)
+Tilt_proxy = total skips (same as engagement?)
+
+unique listens?
+total songs - 
+
+skips per full song
+
+
+```{r}
+
+users_seg <- users_seg %>% 
+  rowwise() %>% 
+  mutate(., 
+        total_skips = sum(num_25, num_50,num_75, num_985, num_100),
+        avg_skip_time = (num_25*0.1 + num_50*0.375 + 
+                           num_75*0.625 + num_985*0.8675 + 
+                           num_100*1 )/ total_skips,
+        early_skips = sum(c(num_25, num_50)),
+        late_skips = sum(c(num_985, num_100)),
+        percent_early_skips = early_skips / total_skips,
+        skips_per_secs = total_skips / total_secs,
+        range_proxy = ifelse(early_skips != 0, num_unq / early_skips, 4000),
+        serach_proxy = early_skips / total_secs,
+        tilt_proxy = total_skips, 
+        #final version?
+        plays_per_unique = total_skips / num_unq,
+        skips_per_full = ifelse(late_skips != 0, early_skips/ late_skips, 150),
+        outer_skips = sum(c(num_25,num_100))
+        )
+
+hist(users_seg$avg_skip_time)
+range(users_seg$avg_skip_time)
+
+hist(users_seg$total_skips)
+
+
+users_seg %>% 
+  filter(., avg_skip_time >0.9)
+
+correl <- round(cor(select(users_seg, -c(msno,date))),1)
+
+ggcorrplot(correl, hc.order = T,
+           type = "lower",
+           lab = T,
+           lab_size = 2,
+           method="circle",
+           ggtheme = theme_bw)
+
+```
+
+
+Repeat but grouping by user before feature generation
+```{r}
+agg_users <- users_seg %>% 
+  group_by(., msno) %>% 
+  summarise(., days_played = n(), 
+            num_25=sum(num_25), 
+            num_50=sum(num_50), 
+            num_75=sum(num_75), 
+            num_985=sum(num_985), 
+            num_100=sum(num_100),
+            num_unq=sum(num_unq),
+            total_secs=sum(total_secs),
+            is_churn=mean(is_churn)
+            )
+length(unique(agg_users$msno)) #15457
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+agg_users <- agg_users %>%  
+ rowwise() %>% 
+  mutate(., 
+        total_skips = sum(num_25, num_50,num_75, num_985, num_100),
+        avg_skip_time = (num_25*0.1 + num_50*0.375 + 
+                           num_75*0.625 + num_985*0.8675 + 
+                           num_100*1 )/ total_skips,
+        early_skips = sum(c(num_25, num_50)),
+        late_skips = sum(c(num_985, num_100)),
+        percent_early_skips = early_skips / total_skips,
+        skips_per_secs = total_skips / total_secs,
+        range_proxy = ifelse(early_skips != 0, num_unq / early_skips, 4000),
+        serach_proxy = early_skips / total_secs,
+        tilt_proxy = total_skips, 
+        #final version?
+        plays_per_unique = total_skips / num_unq,
+        skips_per_full = ifelse(late_skips != 0, early_skips/ late_skips, 150),
+        outer_skips = sum(c(num_25,num_100))
+        )
+
+```
+range proxy, 27k at most (unique / early skips) set to 3 or 4k. (no early skips) Most are low listeners or late skipers.
+
+skips per full: highest value is 80 the rest are infinity. set to 150.
+
+
+
+
+Data exploration
+```{r}
+hist(agg_users$avg_skip_time)
+
+hist(agg_users$num_25 / agg_users$total_skips)
+hist(agg_users$num_50 / agg_users$total_skips)
+hist(agg_users$num_75 / agg_users$total_skips)
+hist(agg_users$num_985 / agg_users$total_skips)
+hist(agg_users$num_100 / agg_users$total_skips)
+```
+
+more complicated
+```{r}
+agg_users %>% 
+  ggplot(., aes(x=avg_skip_time)) +
+  geom_histogram()
+
+agg_users %>% 
+  ggplot(., aes(x=total_skips, group= as.factor(is_churn), fill = as.factor(is_churn))) +
+  geom_histogram(position = "stack")
+
+agg_users %>% 
+  ggplot(., aes(x=total_skips, group= as.factor(is_churn), fill = as.factor(is_churn))) +
+  geom_histogram(position = "fill")
+
+#install.packages("ggcorrplot")
+library(ggcorrplot)
+
+correl_assembly <- agg_users %>% 
+  select(., -c(msno))
+
+correl <- round(cor(select(agg_users, -msno)),1)
+
+ggcorrplot(correl, hc.order = T,
+           type = "lower",
+           lab = T,
+           lab_size = 2,
+           method="circle",
+           ggtheme = theme_bw)
+
+
+#averg search time versus search proxies:
+
+plot_avgskip_vs_skipPerFull <- agg_users %>% 
+  ggplot(., aes(x = avg_skip_time, y = skips_per_full, group = as.factor(is_churn))) +
+  geom_point(aes(color = as.factor(is_churn)))
+
+many_boxes <- agg_users %>% 
+  ggplot(., aes(as.factor(is_churn), )) +
+  geom_boxplot()
+
+for (thingy in colnames(select(agg_users, -msno))){
+  plot_name <-ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$thingy)) +
+    geom_boxplot()
+  print(plot_name)
+}
+
+
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$days_played)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_25)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_50)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_75)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_985)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_100)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$num_unq)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$total_secs)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$is_churn)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$total_skips)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$avg_skip_time)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$early_skips)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$late_skips)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$percent_early_skips)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$skips_per_secs)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$range_proxy)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$serach_proxy)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$tilt_proxy)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$plays_per_unique)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$skips_per_full)) +
+    geom_boxplot()
+ggplot(agg_users, aes(as.factor(is_churn), y = agg_users$outer_skips)) +
+    geom_boxplot()
+```
+
+Finished plots and data
+#### finished plots and data
+```{r}
+agg_users %>% 
+  mutate(is_churn = recode(is_churn, '0'="Retained","1"="Lost")) %>% 
+  ggplot(., aes(x=days_played, group = is_churn,fill = is_churn)) +
+  geom_histogram(position = "fill") +
+  ylab("Percent Churn Decision") +
+  xlab("Number of Days With Sessions") +
+  ggtitle("Percentage churn", )
+
+#things that correlate with days played:
+# -0.2 percent early skips
+# -0.2 skips per full
+# -0.1 is churn
+# 0.2 avg_skip_time
+# -0.2 range proxy (unique / early skip)
+
+correl <- round(cor(select(agg_users, -msno)),1)
+
+ggcorrplot(correl, hc.order = T,
+           type = "full",
+           lab = T,
+           lab_size = 2,
+           method="square",
+           ggtheme = theme_bw)
+
+
+
+#percent early skips and total seconds are inversely correlated
+#test longer accounts versus listening behavior
+
+```
+
+#### 30 day flag plot 
+```{r}
+save_df <- T_and_M
+
+plan_df <- T_and_M %>% 
+  filter(., payment_plan_days != is.na(payment_plan_days)) %>% 
+  mutate(., day30_flag = ifelse(payment_plan_days == 30, "30 Day Plan", "Non-30 Day Plan"))
+
+user_plan <- plan_df %>% 
+  ggplot(., aes(x= day30_flag, fill = day30_flag)) +
+  geom_bar(stat = "count") +
+  ylab("Number of Users in Dataset") +
+  xlab("Type of Payment Plan") +
+  ggtitle("Users by Plan type") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+auto_renew_plot <- plan_df %>% 
+  mutate(., is_auto_renew = recode(is_auto_renew, `1`="Auto Renewal", `0`="No Auto Renewal")) %>% 
+  ggplot(., aes(x = is_auto_renew, fill = is_auto_renew)) +
+  geom_bar() +
+  labs(title = "Number of Users by Auto Renewal" ,
+       x = "Payment Option",
+       y = "Number of Users in Dataset") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+selected_plot <- 
+
+plan_df %>% 
+  mutate(., is_auto_renew = recode(is_auto_renew, `1`="Auto Renewal", `0`="No Auto Renewal")) %>% 
+  ggplot(., aes(x = day30_flag, fill = is_auto_renew, factor = is_auto_renew)) +
+  geom_bar() +
+  labs(title = "Number of Users by Plan and Renewal" ,
+       x = "Plan Option",
+       y = "Number of Users in Dataset") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+user_plan
+auto_renew_plot
+selected_plot
+ggsave("users by plan length and auto renew", plot = selected_plot, device = "png")
+```
+```{r}
+plan_price_diff <- plan_df %>%
+  filter(., is_auto_renew == 1 & day30_flag == "30 Day Plan") %>% 
+  group_by(., plan_list_price) %>% 
+  summarise(., count = n(), percentage = count / sum(count)) %>% 
+  ungroup(.) %>% 
+  mutate(.,percentage = (count / sum(count))*100) %>% 
+  mutate(., plan_list_price = paste0("$",as.factor(plan_list_price))) %>%
+  mutate(., plan_list_price = factor(plan_list_price, levels = c("$99","$100","$119","$120","$129", "$131","$149", "$180"))) %>% 
+  ggplot(., aes(x=as.factor(plan_list_price), y = percentage, fill = plan_list_price)) +
+  geom_bar(stat = "identity" ) +
+  labs(title = "Percentage of Users by Price for 30-day Plan",
+       x = "Prices Paid for 30-day Plan",
+       y = "Percentage Users of 30-day Plans") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggsave("plan price diff", plot = plan_price_diff, device = "png")
+```
+
+```{r}
+plan_df %>%
+  filter(., is_auto_renew == 1 & day30_flag == "30 Day Plan") %>% 
+  group_by(., plan_list_price, is_churn) %>%
+  summarise(., count = n()) %>% 
+  mutate(., is_churn = recode(is_churn, '0'="Stayed", '1'="Churn")) %>% 
+  spread(., is_churn, count) %>% 
+  mutate(., percentage_churn = Churn /(Stayed + Churn))
+
+```
+
+```{r}
+#setwd('/Users/jameswelch/Dropbox (Personal)/NYDSA/Work/Hackathons/NYCDSA_Hackathon_Oct_2020/James')
+#plans_sita <- read_csv("./plans.csv")
+
+plans_user <- read_csv("by_msno.csv")
+
+#summary(plans_sita)
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =log(num_25_per_session_avg))) +
+  geom_boxplot()
+
+plans_sita %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =num_25_per_session_avg)) +
+  geom_bar(stat = "identity")
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =num_50_per_session_avg)) +
+  geom_bar(stat = "identity")
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =log(num_50_per_session_avg))) +
+  geom_boxplot()
+
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =num_75_per_session_avg)) +
+  geom_bar(stat = "identity")
+plans_sita %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =num_985_per_session_avg)) +
+  geom_bar(stat = "identity")
+plans_sita %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =num_100_per_session_avg)) +
+  geom_bar(stat = "identity")
+plans_sita %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =num_unq_per_session_avg)) +
+  geom_bar(stat = "identity")
+plans_sita %>% 
+  ggplot(., aes(x= as.factor(plan_list_price), y =total_secs_per_session)) +
+  geom_bar(stat = "identity")
+#usage seems to increase slightly with higher prices
+#make a total interventions / session 
+
+plans_user%>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =age)) +
+  geom_boxplot()
+
+#age is nope
+
+
+
+
+
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =num_sessions)) +
+  geom_violin()
+#engagement metric
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =membership_duration)) +
+  geom_boxplot()
+#mixed
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =log(days_to_expiration))) +
+  geom_boxplot()
+#eh
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =as.factor(city))) +
+  geom_jitter()
+#better graph needed
+
+#fuck
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =as.factor(registered_via))) +
+  geom_jitter()
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =as.factor(payment_method_id))) +
+  geom_jitter()
+#doulble fukc
+
+
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), fill =as.factor(is_churn))) +
+  geom_bar(position = "fill")
+#nope
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), fill =as.factor(is_female))) +
+  geom_bar(position = "fill")
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =as.factor(payment_method_id))) +
+  geom_jitter()
+
+
+plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), fill =as.factor(is_cancel))) +
+  geom_bar(position = "fill")
+
+
+correl <- round(cor(select(plans_user, -msno)),1)
+
+ggcorrplot(correl, hc.order = T,
+           type = "full",
+           lab = T,
+           lab_size = 2,
+           method="square",
+           ggtheme = theme_bw)
+
+plans_user %>% 
+  rowwise() %>% 
+  mutate(., total_interventions = sum(num_25_per_session_avg, num_50_per_session_avg, num_75_per_session_avg, num_985_per_session_avg, num_100_per_session_avg)) %>% 
+    ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =log(total_interventions))) +
+  geom_boxplot()
+
+
+```
+
+final graphs
+```{r}
+#engagement metric
+# registred via
+# payment method
+
+registration_via_price <- plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), fill =as.factor(registered_via))) +
+  geom_bar(position = "fill") +
+    scale_fill_brewer(palette = "Set2") +
+  labs(title = "Registration Percentage by Plan Cost" ,
+       y = "Percentage Registered Via" ,
+       x = "Cost of 30-day plan in NT$") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill=guide_legend(title = "Registration Method"))
+
+#register = age and duration
+#payment = neg with list price, and actual paid / memb duration 28% / city
+
+registration_via_price 
+ggsave("reg_via_price", plot = registration_via_price , device = "png")
+
+
+```
+
+```{r}
+
+payment_method_diversity <- plans_user %>% 
+  ggplot(., aes(x= as.factor(plan_list_price_per_transaction_avg), y =as.factor(payment_method_id), color = as.factor(is_churn))) +
+  geom_jitter() +
+  #scale_fill_brewer(palette = "Set2") +
+  labs(title = "Diversity of Payment Methods by Plan Cost" ,
+       y = "Payment Method Type" ,
+       x = "Cost of 30-day plan in NT$") +
+  theme(plot.title = element_text(hjust = 0.5)) #+
+  #guides(fill=guide_legend(title = "Payment Method"))
+payment_method_diversity
+
+ggsave("payment_id_diversity", plot = payment_method_diversity, device = "png")
+  
+```
+
+
+```{r}
+
+day30_plans <- plans_user %>% 
+  group_by(., plan_list_price_per_transaction_avg) %>%
+  summarise(., count= n(), percentage = count / sum(count)) %>% 
+  ungroup(.) %>% 
+  mutate(.,percentage = (count / sum(count))*100) %>% 
+  mutate(., plan_list_price_per_transaction_avg = paste0("$",as.factor(plan_list_price_per_transaction_avg))) %>%
+  mutate(., plan_list_price_per_transaction_avg = factor(plan_list_price_per_transaction_avg, levels = c("$99","$100","$129","$149", "$180"))) %>% 
+  ggplot(., aes(x=as.factor(plan_list_price_per_transaction_avg), y = percentage, fill = plan_list_price_per_transaction_avg)) +
+  geom_bar(stat = "identity" ) +
+  labs(title = "Percentage of Users by Price for 30-day Plan",
+       x = "Prices Paid for 30-day Plan",
+       y = "Percentage Users of 30-day Plans") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill=guide_legend(title = "Cost of 30-Day Plan"))
+
+ggsave("day30_plans", plot = day30_plans, device = "png")
+
+```
 
 
